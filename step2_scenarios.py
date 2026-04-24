@@ -12,10 +12,7 @@ print(f"Portfolio loaded: {len(portfolio)} loans\n")
 
 # ============================================================
 # PART A: DEFINE MACROECONOMIC SCENARIOS
-# ============================================================
-# We use two MEVs (Macroeconomic Variables):
-#   1. GDP Growth Rate (%)
-#   2. Unemployment Rate (%)
+# GDP Growth Rate (%) and Unemployment Rate (%) are used as the MEVs
 # ============================================================
 
 scenarios = {
