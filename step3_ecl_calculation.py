@@ -1,18 +1,8 @@
-# ============================================================
-# ECL STRESS TESTING MODEL
-# Step 3: ECL Calculation with Probability-Weighted Scenarios
-# ============================================================
-
 import pandas as pd
 import numpy as np
 
-# --- Load data from Step 2 ---
 df = pd.read_csv("portfolio_with_pd.csv")
 print(f"Loaded {len(df):,} rows (500 loans × 3 scenarios)\n")
-
-# ============================================================
-# PART A: IFRS 9 STAGE-BASED ECL HORIZON
-# ============================================================
 
 def get_ecl_horizon(stage, tenor_years):
     """
@@ -29,22 +19,13 @@ df["ecl_horizon"] = df.apply(
     lambda row: get_ecl_horizon(row["stage"], row["tenor_years"]), axis=1
 )
 
-# ============================================================
-# PART B: COMPUTE ECL PER LOAN PER SCENARIO
-# ============================================================
-
 df["ecl_gross"] = (
-    df["scenario_pd"]   # Point-in-time, scenario-adjusted PD
-    * df["lgd"]         # Loss Given Default (collateral-adjusted)
-    * df["ead"]         # Exposure at Default (RM thousands)
-    * df["ecl_horizon"] # 1 year for Stage 1, full tenor for Stage 2/3
+    df["scenario_pd"]   
+    * df["lgd"]         
+    * df["ead"]         
+    * df["ecl_horizon"] 
 ).round(4)
 
-# ============================================================
-# PART C: PROBABILITY-WEIGHTED ECL
-# ============================================================
-
-# Apply probability weight to each row
 df["ecl_weighted"] = (df["ecl_gross"] * df["scenario_probability"]).round(4)
 
 ecl_final = df.groupby("loan_id").agg(
@@ -56,7 +37,6 @@ ecl_final = df.groupby("loan_id").agg(
     ecl_horizon     = ("ecl_horizon", "first"),
     rating_grade    = ("rating_grade", "first"),
 
-    # Scenario-level ECL for comparison
     ecl_optimistic  = ("ecl_gross",
                        lambda x: x[df.loc[x.index, "scenario"] == "Optimistic"].sum()),
     ecl_base        = ("ecl_gross",
@@ -64,18 +44,12 @@ ecl_final = df.groupby("loan_id").agg(
     ecl_adverse     = ("ecl_gross",
                        lambda x: x[df.loc[x.index, "scenario"] == "Adverse"].sum()),
 
-    # Final probability-weighted ECL
     ecl_weighted    = ("ecl_weighted", "sum"),
 ).reset_index()
 
-# Coverage ratio: ECL as % of EAD (key portfolio health metric)
 ecl_final["ecl_coverage_pct"] = (
     ecl_final["ecl_weighted"] / ecl_final["ead"] * 100
 ).round(2)
-
-# ============================================================
-# PART D: PORTFOLIO-LEVEL SUMMARY
-# ============================================================
 
 total_ead          = ecl_final["ead"].sum()
 total_ecl_base     = ecl_final["ecl_base"].sum()
@@ -90,10 +64,6 @@ print(f"ECL — Base Scenario:          RM {total_ecl_base:>12,.1f}k")
 print(f"ECL — Adverse Scenario:       RM {total_ecl_adverse:>12,.1f}k")
 print(f"ECL — Probability Weighted:   RM {total_ecl_weighted:>12,.1f}k")
 print(f"ECL Coverage Ratio:           {total_ecl_weighted/total_ead*100:>11.2f}%")
-
-# ============================================================
-# PART E: ECL BY IFRS 9 STAGE
-# ============================================================
 
 print("\n\n" + "=" * 60)
 print("ECL BREAKDOWN BY STAGE (Probability-Weighted, RM '000)")
@@ -115,10 +85,6 @@ stage_summary.index = ["Stage 1 (Performing)",
 stage_summary.columns = ["# Loans", "EAD (RM'000)", "ECL (RM'000)", "Coverage %"]
 print(stage_summary.to_string())
 
-# ============================================================
-# PART F: ECL BY SECTOR
-# ============================================================
-
 print("\n\n" + "=" * 60)
 print("ECL BREAKDOWN BY SECTOR (Probability-Weighted, RM '000)")
 print("=" * 60)
@@ -137,14 +103,6 @@ sector_summary.columns = ["# Loans", "EAD (RM'000)", "ECL (RM'000)", "Coverage %
 sector_summary = sector_summary.sort_values("ECL (RM'000)", ascending=False)
 print(sector_summary.to_string())
 
-# ============================================================
-# PART G: SCENARIO SENSITIVITY — STRESS IMPACT
-# ============================================================
-# This shows how much ECL would increase if the adverse
-# scenario were to materialise — a key output for stress
-# testing and capital planning conversations.
-# ============================================================
-
 print("\n\n" + "=" * 60)
 print("SCENARIO SENSITIVITY ANALYSIS")
 print("=" * 60)
@@ -160,9 +118,8 @@ print(f"\nInterpretation: In an adverse scenario, portfolio ECL")
 print(f"would increase by {stress_uplift_pct:.1f}% relative to base — representing")
 print(f"RM {stress_uplift:,.1f}k of additional expected losses.")
 
-# --- Save for Step 4 (visualisation) ---
 ecl_final.to_csv("ecl_results.csv", index=False)
-df.to_csv("ecl_by_scenario.csv", index=False)  # Full scenario-level data
+df.to_csv("ecl_by_scenario.csv", index=False)  
 
 print("\n\nSaved:")
 print("  ecl_results.csv      — 500 loans with weighted ECL (for dashboard)")
