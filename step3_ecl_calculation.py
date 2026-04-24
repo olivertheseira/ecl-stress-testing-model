@@ -2,12 +2,6 @@
 # ECL STRESS TESTING MODEL
 # Step 3: ECL Calculation with Probability-Weighted Scenarios
 # ============================================================
-# WHY: IFRS 9 para 5.5.17 requires ECL to reflect an unbiased
-# probability-weighted amount, determined by evaluating a range
-# of possible outcomes. This step computes ECL for each loan
-# under each scenario, then collapses them into a single
-# probability-weighted ECL figure per loan.
-# ============================================================
 
 import pandas as pd
 import numpy as np
@@ -19,25 +13,6 @@ print(f"Loaded {len(df):,} rows (500 loans × 3 scenarios)\n")
 # ============================================================
 # PART A: IFRS 9 STAGE-BASED ECL HORIZON
 # ============================================================
-# IFRS 9 distinguishes ECL measurement by stage:
-#
-#   Stage 1: 12-month ECL
-#             → Only losses expected in the next 12 months
-#             → Reflects loans with no significant credit
-#               deterioration since origination
-#
-#   Stage 2: Lifetime ECL
-#             → All losses expected over remaining loan life
-#             → Triggered by significant increase in credit risk
-#
-#   Stage 3: Lifetime ECL (credit-impaired)
-#             → Same horizon as Stage 2 but borrower has
-#               already defaulted or is near default
-#
-# This distinction is what drives the "cliff effect" in IFRS 9 —
-# moving from Stage 1 to Stage 2 dramatically increases ECL
-# because the horizon jumps from 12 months to full tenor.
-# ============================================================
 
 def get_ecl_horizon(stage, tenor_years):
     """
@@ -48,7 +23,7 @@ def get_ecl_horizon(stage, tenor_years):
     if stage == 1:
         return 1.0
     else:
-        return tenor_years   # Remaining life of the loan
+        return tenor_years   
 
 df["ecl_horizon"] = df.apply(
     lambda row: get_ecl_horizon(row["stage"], row["tenor_years"]), axis=1
@@ -56,19 +31,6 @@ df["ecl_horizon"] = df.apply(
 
 # ============================================================
 # PART B: COMPUTE ECL PER LOAN PER SCENARIO
-# ============================================================
-# ECL Formula:
-#   ECL = PD × LGD × EAD × Horizon Adjustment
-#
-# The horizon adjustment accounts for the fact that Stage 2/3
-# loans must project losses over multiple years, not just 12
-# months. We use a simplified annualised approach here:
-#
-#   ECL = PD_annual × LGD × EAD × ecl_horizon
-#
-# In a full model this would use a survival curve (cumulative
-# PD over time), but this simplified version is directionally
-# correct and appropriate for a portfolio-level stress test.
 # ============================================================
 
 df["ecl_gross"] = (
@@ -81,23 +43,10 @@ df["ecl_gross"] = (
 # ============================================================
 # PART C: PROBABILITY-WEIGHTED ECL
 # ============================================================
-# Each scenario's ECL is weighted by its probability and
-# summed to produce a single expected loss figure per loan.
-# This is the probability-weighted ECL that IFRS 9 requires.
-#
-# Example for a single loan:
-#   Optimistic ECL = RM 10  × 25% = RM  2.50
-#   Base ECL       = RM 25  × 55% = RM 13.75
-#   Adverse ECL    = RM 60  × 20% = RM 12.00
-#   ─────────────────────────────────────────
-#   Weighted ECL   =               RM 28.25
-# ============================================================
 
 # Apply probability weight to each row
 df["ecl_weighted"] = (df["ecl_gross"] * df["scenario_probability"]).round(4)
 
-# Collapse from 1,500 rows (3 scenarios) to 500 rows (1 per loan)
-# by summing the weighted ECL across scenarios for each loan
 ecl_final = df.groupby("loan_id").agg(
     sector          = ("sector", "first"),
     stage           = ("stage", "first"),
