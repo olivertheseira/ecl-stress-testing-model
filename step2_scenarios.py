@@ -2,11 +2,6 @@
 # ECL STRESS TESTING MODEL
 # Step 2: Define Macroeconomic Scenarios & Map to PD
 # ============================================================
-# WHY: IFRS 9 requires ECL to be calculated using multiple
-# forward-looking macroeconomic scenarios, each weighted by
-# probability. This mirrors exactly what you did at SMBC —
-# selecting MEVs and running scenario simulations.
-# ============================================================
 
 import pandas as pd
 import numpy as np
@@ -21,9 +16,6 @@ print(f"Portfolio loaded: {len(portfolio)} loans\n")
 # We use two MEVs (Macroeconomic Variables):
 #   1. GDP Growth Rate (%)
 #   2. Unemployment Rate (%)
-#
-# These are the most common MEVs used in IFRS 9 ECL models
-# for corporate/SME portfolios — consistent with BNM guidance.
 # ============================================================
 
 scenarios = {
@@ -66,9 +58,7 @@ for name, params in scenarios.items():
 # PART B: BASE PD BY RATING GRADE
 # ============================================================
 # These are the through-the-cycle (TTC) PDs assigned to each
-# internal rating grade. In practice these come from your
-# internal rating model or external rating agency mappings.
-# Here we use values consistent with typical bank rating scales.
+# internal rating grade.
 # ============================================================
 
 base_pd = {
@@ -85,7 +75,7 @@ base_pd = {
 # ============================================================
 # PART C: SCENARIO PD MULTIPLIERS
 # ============================================================
-# We adjust base PDs upward or downward depending on the
+# Adjust base PDs upward or downward depending on the
 # macroeconomic scenario. This is the MEV linkage —
 # the core of forward-looking IFRS 9 ECL modelling.
 #
@@ -94,7 +84,7 @@ base_pd = {
 #
 # In a real model, these multipliers come from regression
 # analysis linking MEVs to historical default rates.
-# Here we derive them from the GDP and unemployment inputs
+# Here it is derived from the GDP and unemployment inputs
 # using a simplified but directionally correct approach.
 # ============================================================
 
